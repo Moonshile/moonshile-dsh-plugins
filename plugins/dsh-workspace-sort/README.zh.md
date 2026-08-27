@@ -12,11 +12,15 @@ DSH 原生工作区顺序是手动拖拽（持久化的 `workspaceIds` 数组）
 
 ## 安装
 
+需要 PATH 上有 [pnpm](https://pnpm.io/installation) —— `dsh plugin` 会把 profile 的包操作转发给 pnpm。
+
 ```bash
 dsh plugin --profile web add dsh-workspace-sort
 ```
 
-本包声明了 `dsh.bundle.patch`，会作为**活动的 profile bundle** 安装——一条命令，无需手动改 patch。安装后重启 `dsh web`（bundle 层在启动时挂载）。
+把 npm 包 [`dsh-workspace-sort`](https://www.npmjs.com/package/dsh-workspace-sort) 装进 `web` profile 并作为 bundle 激活（本包声明了 `dsh.bundle.patch`）。**一条命令，无需手动改 patch。** 安装后重启 `dsh web` 以挂载 bundle 层。
+
+其他 profile：把 `web` 换成对应名字，例如 `dsh plugin --profile <名字> add dsh-workspace-sort`。
 
 ## 行为
 

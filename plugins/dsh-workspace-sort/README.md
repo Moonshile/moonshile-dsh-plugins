@@ -12,11 +12,15 @@ DSH's native workspace order is manual drag order (the durable `workspaceIds` ar
 
 ## Install
 
+Requires [pnpm](https://pnpm.io/installation) on your PATH — `dsh plugin` forwards profile package operations to pnpm.
+
 ```bash
 dsh plugin --profile web add dsh-workspace-sort
 ```
 
-The package declares `dsh.bundle.patch`, so it installs as an **active profile bundle** — one command, no manual patch editing. Restart `dsh web` after installing (bundle layers mount at boot).
+Installs the npm package [`dsh-workspace-sort`](https://www.npmjs.com/package/dsh-workspace-sort) into the `web` profile and activates it as a bundle (the package declares `dsh.bundle.patch`). **One command, no manual patch editing.** Restart `dsh web` to mount the bundle layer.
+
+Other profiles: replace `web` with the profile name, e.g. `dsh plugin --profile <name> add dsh-workspace-sort`.
 
 ## Behavior
 

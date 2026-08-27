@@ -1,17 +1,24 @@
 {
   "name": "dsh-workspace-sort",
-  "version": "0.1.0",
-  "description": "Host plugin for DeepSeek Harness (DSH): re-sort sidebar workspaces by last activity once per day (侧边栏工作区顺序每日按最近活动刷新，当天保持稳定)",
+  "version": "0.1.1",
+  "description": "DeepSeek Harness (DSH) bundle: re-sort sidebar workspaces by last activity once per day, stable within the day (侧边栏工作区顺序每日按最近活动刷新，当天稳定)",
   "type": "module",
   "main": "lib/index.js",
   "files": [
-    "lib/index.js"
+    "lib/index.js",
+    "cordis.patch.yml"
   ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "license": "MIT",
   "keywords": [
     "dsh",
     "deepseek-harness",
     "plugin",
+    "bundle",
     "workspace",
     "sidebar"
   ],
@@ -19,3 +26,4 @@
     "test": "node --test lib/index.test.mjs"
   }
 }
+

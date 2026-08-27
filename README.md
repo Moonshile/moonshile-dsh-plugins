@@ -35,4 +35,4 @@ pnpm publish --access public
 
 | Plugin | What it does | Install |
 | --- | --- | --- |
-| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` + patch `insert` row |
+| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` (auto-activating bundle) |

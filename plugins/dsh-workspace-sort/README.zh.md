@@ -2,7 +2,9 @@
 
 [English](README.md) | 中文
 
-DeepSeek Harness (DSH) host 插件：侧边栏工作区顺序**每天**按最近活动刷新一次，当天其余时间完全稳定。
+[![npm version](https://img.shields.io/npm/v/dsh-workspace-sort.svg)](https://www.npmjs.com/package/dsh-workspace-sort)
+
+DeepSeek Harness (DSH) 插件 bundle：侧边栏工作区顺序**每天**按最近活动刷新一次，当天其余时间完全稳定。
 
 ## 为什么
 
@@ -14,17 +16,7 @@ DSH 原生工作区顺序是手动拖拽（持久化的 `workspaceIds` 数组）
 dsh plugin --profile web add dsh-workspace-sort
 ```
 
-在 profile 的 `cordis.patch.yml` 加（新增行必须用 `insert` 语义）：
-
-```yaml
-- insert:
-    - id: workspace-sort
-      name: dsh-workspace-sort
-      inject:
-        - workspaceRegistry
-```
-
-host 插件**代码**变更需重启 `dsh web` 生效（行级变更可热生效）。
+本包声明了 `dsh.bundle.patch`，会作为**活动的 profile bundle** 安装——一条命令，无需手动改 patch。安装后重启 `dsh web`（bundle 层在启动时挂载）。
 
 ## 行为
 

@@ -35,4 +35,4 @@ pnpm publish --access public
 
 | 插件 | 说明 | 安装 |
 | --- | --- | --- |
-| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天稳定） | `dsh plugin --profile web add dsh-workspace-sort` + patch `insert` 行 |
+| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天稳定） | `dsh plugin --profile web add dsh-workspace-sort`（自动激活的 bundle） |

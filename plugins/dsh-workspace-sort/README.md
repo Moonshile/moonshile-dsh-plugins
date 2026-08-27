@@ -2,7 +2,9 @@
 
 English | [中文](README.zh.md)
 
-DeepSeek Harness (DSH) host plugin: re-sorts the sidebar workspace order by last activity **once per day**; the order stays fully stable for the rest of the day.
+[![npm version](https://img.shields.io/npm/v/dsh-workspace-sort.svg)](https://www.npmjs.com/package/dsh-workspace-sort)
+
+DeepSeek Harness (DSH) plugin bundle: re-sorts the sidebar workspace order by last activity **once per day**; the order stays fully stable for the rest of the day.
 
 ## Why
 
@@ -14,17 +16,7 @@ DSH's native workspace order is manual drag order (the durable `workspaceIds` ar
 dsh plugin --profile web add dsh-workspace-sort
 ```
 
-Add to the profile's `cordis.patch.yml` (new rows must use `insert` semantics):
-
-```yaml
-- insert:
-    - id: workspace-sort
-      name: dsh-workspace-sort
-      inject:
-        - workspaceRegistry
-```
-
-Host-plugin **code** changes require restarting `dsh web` (row-level changes hot-apply).
+The package declares `dsh.bundle.patch`, so it installs as an **active profile bundle** — one command, no manual patch editing. Restart `dsh web` after installing (bundle layers mount at boot).
 
 ## Behavior
 

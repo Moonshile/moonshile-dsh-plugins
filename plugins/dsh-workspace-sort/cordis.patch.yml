@@ -1,0 +1,8 @@
+# dsh-workspace-sort bundle patch: inserts the plugin row into the profile
+# composition when the package is installed as a profile bundle via
+# `dsh plugin --profile web add dsh-workspace-sort`.
+- insert:
+    - id: workspace-sort
+      name: dsh-workspace-sort
+      inject:
+        - workspaceRegistry

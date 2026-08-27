@@ -31,8 +31,10 @@ cd plugins/<package-name>
 pnpm publish --access public
 ```
 
-## Plugin list
+## Plugins
 
-| Plugin | What it does | Install |
-| --- | --- | --- |
-| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` (auto-activating bundle) |
+Every plugin is an npm package installed with `dsh plugin` — one command, auto-activating bundle. Each plugin has its own directory and README.
+
+| Plugin | What it does | Install | Usage |
+| --- | --- | --- | --- |
+| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` | None needed — install, restart `dsh web`; it runs daily, sorting by session activity. Last-sort date is persisted at `~/.dsh/workspace-sort-state.json`. |

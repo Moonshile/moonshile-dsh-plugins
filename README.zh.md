@@ -31,8 +31,10 @@ cd plugins/<package-name>
 pnpm publish --access public
 ```
 
-## 插件列表
+## 插件
 
-| 插件 | 说明 | 安装 |
-| --- | --- | --- |
-| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天稳定） | `dsh plugin --profile web add dsh-workspace-sort`（自动激活的 bundle） |
+所有插件都是 npm 包，用 `dsh plugin` 一条命令安装（自动激活的 bundle）。每个插件有独立目录和 README。
+
+| 插件 | 说明 | 安装 | 使用方法 |
+| --- | --- | --- | --- |
+| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天顺序稳定） | `dsh plugin --profile web add dsh-workspace-sort` | 无需配置——安装后重启 `dsh web`，它每天按会话活动自动排序；上次排序日期存于 `~/.dsh/workspace-sort-state.json`。 |

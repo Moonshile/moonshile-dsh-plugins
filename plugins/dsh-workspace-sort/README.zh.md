@@ -1,5 +1,7 @@
 # dsh-workspace-sort
 
+[English](README.md) | 中文
+
 DeepSeek Harness (DSH) host 插件：侧边栏工作区顺序**每天**按最近活动刷新一次，当天其余时间完全稳定。
 
 ## 为什么

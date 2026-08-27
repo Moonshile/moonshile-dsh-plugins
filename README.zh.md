@@ -1,5 +1,7 @@
 # moonshile-dsh-plugins
 
+[English](README.md) | 中文
+
 Moonshile 的 DeepSeek Harness (DSH) 插件集合。每个插件一个独立目录、依赖各自管理，pnpm workspace 统一编排。
 
 ## 结构

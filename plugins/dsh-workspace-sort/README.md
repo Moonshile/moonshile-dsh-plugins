@@ -1,5 +1,7 @@
 # dsh-workspace-sort
 
+English | [中文](README.zh.md)
+
 DeepSeek Harness (DSH) host plugin: re-sorts the sidebar workspace order by last activity **once per day**; the order stays fully stable for the rest of the day.
 
 ## Why

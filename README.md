@@ -1,5 +1,7 @@
 # moonshile-dsh-plugins
 
+English | [中文](README.zh.md)
+
 Moonshile's DeepSeek Harness (DSH) plugin collection. Each plugin lives in its own directory as an independent npm package, dependencies managed per package, orchestrated by a pnpm workspace.
 
 ## Layout

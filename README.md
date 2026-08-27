@@ -1,36 +1,36 @@
 # moonshile-dsh-plugins
 
-Moonshile 的 DeepSeek Harness (DSH) 插件集合。每个插件一个独立目录、依赖各自管理，pnpm workspace 统一编排。
+Moonshile's DeepSeek Harness (DSH) plugin collection. Each plugin lives in its own directory as an independent npm package, dependencies managed per package, orchestrated by a pnpm workspace.
 
-## 结构
+## Layout
 
 ```
 plugins/
 └── <package-name>/
-    ├── package.json   # 独立包：name / main / files / scripts
-    ├── lib/           # 实现（host 半边 / client 半边）
-    ├── lib/*.test.mjs # node:test 纯函数测试
-    └── README.md
+    ├── package.json   # standalone package: name / main / files / scripts
+    ├── lib/           # implementation (host half / client half)
+    ├── lib/*.test.mjs # node:test pure-function tests
+    └── README.md      # English (中文见 README.zh.md)
 ```
 
-## 本地开发
+## Local development
 
 ```bash
-pnpm install     # 根目录安装 workspace
-pnpm test        # 运行全部插件测试（pnpm -r test）
+pnpm install     # install the workspace from the repo root
+pnpm test        # run every plugin's tests (pnpm -r test)
 ```
 
-## 发布
+## Publishing
 
-每个插件独立发布到 npm（包名需全局唯一）：
+Each plugin is published to npm independently (package names must be globally unique on the registry):
 
 ```bash
 cd plugins/<package-name>
 pnpm publish --access public
 ```
 
-## 插件列表
+## Plugin list
 
-| 插件 | 说明 | 安装 |
+| Plugin | What it does | Install |
 | --- | --- | --- |
-| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天稳定） | `dsh plugin --profile web add dsh-workspace-sort` + patch `insert` 行 |
+| [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` + patch `insert` row |

@@ -1,0 +1,9 @@
+{
+  "name": "moonshile-dsh-plugins",
+  "private": true,
+  "description": "Moonshile's DeepSeek Harness (DSH) plugin collection. Each plugin lives in plugins/<name>/ as an independent npm package.",
+  "scripts": {
+    "test": "pnpm -r test",
+    "publish:all": "pnpm -r publish --access public"
+  }
+}

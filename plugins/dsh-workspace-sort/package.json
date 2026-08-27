@@ -1,0 +1,21 @@
+{
+  "name": "dsh-workspace-sort",
+  "version": "0.1.0",
+  "description": "Host plugin for DeepSeek Harness (DSH): re-sort sidebar workspaces by last activity once per day (侧边栏工作区顺序每日按最近活动刷新，当天保持稳定)",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "workspace",
+    "sidebar"
+  ],
+  "scripts": {
+    "test": "node --test lib/index.test.mjs"
+  }
+}

@@ -38,3 +38,10 @@ Every plugin is an npm package installed with `dsh plugin` — one command, auto
 | Plugin | What it does | Install | Usage |
 | --- | --- | --- | --- |
 | [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` | None needed — install, restart `dsh web`; it runs daily, sorting by session activity. Last-sort date is persisted at `~/.dsh/workspace-sort-state.json`. |
+
+## Adding a plugin
+
+1. Create `plugins/<package-name>/` with its own `package.json` (name, `main`, `files`, `license`, `dsh.bundle.patch`) and `lib/`.
+2. Add tests as `lib/*.test.mjs` (`node:test`); verify with `pnpm test`.
+3. Add a row to the [Plugins](#plugins) table.
+4. Publish it to npm (`pnpm publish --access public`); the repo CI publishes it automatically on push when its version is new.

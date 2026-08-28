@@ -38,3 +38,10 @@ pnpm publish --access public
 | 插件 | 说明 | 安装 | 使用方法 |
 | --- | --- | --- | --- |
 | [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天顺序稳定） | `dsh plugin --profile web add dsh-workspace-sort` | 无需配置——安装后重启 `dsh web`，它每天按会话活动自动排序；上次排序日期存于 `~/.dsh/workspace-sort-state.json`。 |
+
+## 添加插件
+
+1. 新建 `plugins/<包名>/`，配好 `package.json`（name、main、files、license、`dsh.bundle.patch`）和 `lib/`。
+2. 以 `lib/*.test.mjs`（node:test）补测试，用 `pnpm test` 验证。
+3. 在 [插件](#插件) 表格里加一行。
+4. 发布到 npm（`pnpm publish --access public`）；仓库 CI 会在 push 时自动发布未发布的版本。

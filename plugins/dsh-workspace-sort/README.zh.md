@@ -4,6 +4,8 @@
 
 [![npm version](https://img.shields.io/npm/v/dsh-workspace-sort.svg)](https://www.npmjs.com/package/dsh-workspace-sort)
 
+[![awesome · DSH plugin](https://awesome-dsh-plugin.com/badge.svg)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
+
 入选列表：[0xsline/awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) · [awesome-deepseekharness/awesome-deepseek-harness](https://github.com/awesome-deepseekharness/awesome-deepseek-harness)
 
 DeepSeek Harness (DSH) 插件 bundle：侧边栏工作区顺序**每天**按最近活动刷新一次，当天其余时间完全稳定。

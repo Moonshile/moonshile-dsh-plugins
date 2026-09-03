@@ -4,6 +4,8 @@ English | [中文](README.zh.md)
 
 [![npm version](https://img.shields.io/npm/v/dsh-workspace-sort.svg)](https://www.npmjs.com/package/dsh-workspace-sort)
 
+[![awesome · DSH plugin](https://awesome-dsh-plugin.com/badge.svg)](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
+
 Listed in: [0xsline/awesome-deepseek-harness](https://github.com/0xsline/awesome-deepseek-harness) · [awesome-deepseekharness/awesome-deepseek-harness](https://github.com/awesome-deepseekharness/awesome-deepseek-harness)
 
 DeepSeek Harness (DSH) plugin bundle: re-sorts the sidebar workspace order by last activity **once per day**; the order stays fully stable for the rest of the day.

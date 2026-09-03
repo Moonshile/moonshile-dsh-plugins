@@ -31,7 +31,9 @@ importers:
       '@deepseek-ai/dsh-llm-pi-ai':
         specifier: ^0.1.2-alpha.5
         version: 0.1.2-alpha.5(1f7d150d7e46f41677860bac6c403e99)
-
+      '@deepseek-ai/schemastery':
+        specifier: ^3.18.2
+        version: 3.18.2
 
   plugins/dsh-workspace-sort: {}
 

@@ -43,19 +43,26 @@ dsh plugin --profile web add dsh-responses-replay-fix
 
 ## 目标 provider
 
-默认只作用于 **`zhongxin`** provider 路由。要加入其它路由，在启动 `dsh web` 前设置环境变量：
+默认只作用于 **`zhongxin`** provider 路由。生效名单通过 DSH **settings 段** `responses-replay-fix` 配置（settings.yaml 顶层键，与 provider 配置同一处编辑）：
 
-```bash
-DSH_RESPONSES_REPLAY_FIX_PROVIDERS=zhongxin,b-ai dsh web
+```yaml
+responses-replay-fix:
+  providers:
+    - zhongxin
+    - b-ai
 ```
 
-（逗号分隔的 provider id；`b-ai` 是另一个已知会返回裸 UUID 消息 id 的路由。）
+- **未配置** → `["zhongxin"]`（默认）。
+- **显式 `providers: []`** → 不修复任何 provider（等于关闭插件效果）。
+- **给定列表** → 只规整这些 provider 路由（`b-ai` 是另一个已知会返回裸 UUID 消息 id 的路由）。
+- settings 改动对后续请求即时生效——无需重启。
 
 ## 工作原理
 
 ```
 dsh web host (lib/index.js)
   apply(ctx)
+    注册 settings 段 "responses-replay-fix"（providers 名单）
     包装 PiAiAdapter.prototype.streamWithSnapshot
       options.messages (durable assistant 消息)
         ├─ textSignature.id  →  缺 msg_ 前缀则补
@@ -64,7 +71,7 @@ dsh web host (lib/index.js)
       yield* original(options, snapshot)   ← 网关收到合规回放
 ```
 
-包装点选 `streamWithSnapshot`：所有调用路径（`stream()` 与 `prepareCall` 返回的 stream 闭包）都经过它，一处补丁即覆盖整个 provider。纯规整逻辑在 `lib/core.js`（有单测，不依赖 DSH 运行时）。
+包装点选 `streamWithSnapshot`：所有调用路径（`stream()` 与 `prepareCall` 返回的 stream 闭包）都经过它，一处补丁即覆盖整个 provider。目标 provider 名单每次请求从 settings 段读取（经 `source()`），所以改 settings 无需重启即时生效。纯规整逻辑在 `lib/core.js`（有单测，不依赖 DSH 运行时）。
 
 ## 开发
 

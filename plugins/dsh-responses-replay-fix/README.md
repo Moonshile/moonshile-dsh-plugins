@@ -43,19 +43,26 @@ Other profiles: replace `web` with the profile name, e.g. `dsh plugin --profile 
 
 ## Provider targeting
 
-By default the fix applies only to the **`zhongxin`** provider route. To target other routes, set the environment variable before starting `dsh web`:
+By default the fix applies only to the **`zhongxin`** provider route. The active provider list is configured through DSH's **settings** section `responses-replay-fix` (a top-level key in `settings.yaml`, editable from the same place you configure providers):
 
-```bash
-DSH_RESPONSES_REPLAY_FIX_PROVIDERS=zhongxin,b-ai dsh web
+```yaml
+responses-replay-fix:
+  providers:
+    - zhongxin
+    - b-ai
 ```
 
-(comma-separated provider ids; `b-ai` is the other route known to emit bare-UUID message ids).
+- **Unset** → `["zhongxin"]` (the default).
+- **Explicit `providers: []`** → no provider is fixed (the plugin is effectively off).
+- **A list** → only those provider routes are normalized (`b-ai` is the other route known to emit bare-UUID message ids).
+- Settings changes apply to subsequent requests immediately — no restart needed.
 
 ## How it works
 
 ```
 dsh web host (lib/index.js)
   apply(ctx)
+    registers settings section "responses-replay-fix" (providers list)
     wraps PiAiAdapter.prototype.streamWithSnapshot
       options.messages (durable assistant messages)
         ├─ textSignature.id  →  msg_ prefix if missing
@@ -64,7 +71,7 @@ dsh web host (lib/index.js)
       yield* original(options, snapshot)   ← gateway receives conformant replay
 ```
 
-The wrap point is `streamWithSnapshot`, which every call path (`stream()` and the `prepareCall` stream closure) flows through, so one patch covers the whole provider. Pure normalization logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency).
+The wrap point is `streamWithSnapshot`, which every call path (`stream()` and the `prepareCall` stream closure) flows through, so one patch covers the whole provider. The target-provider list is read from the settings section on every request (via `source()`), so a settings change applies without a restart. Pure normalization logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency).
 
 ## Development
 

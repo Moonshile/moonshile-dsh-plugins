@@ -193,3 +193,27 @@ export function normalizeMessages(messages) {
 	});
 	return changed ? next : messages;
 }
+
+/**
+ * 由 settings 段的 providers 值解析"生效的 provider 集合"。
+ *
+ * 语义：
+ * - `undefined`/缺省 → 使用默认名单（`["zhongxin"]`）；
+ * - 显式空数组 → 空集合（不修复任何 provider，可用于关闭本插件效果）；
+ * - 其它数组 → 按给定名单生效（原样、去重、保留顺序）。
+ * @param providers - settings 段 `responses-replay-fix.providers` 的解析值。
+ * @param defaults - 缺省时的名单（测试可注入）。
+ * @returns 生效的 provider 数组。
+ */
+export function resolveProviders(providers, defaults = ["zhongxin"]) {
+	if (!Array.isArray(providers)) return [...defaults];
+	const seen = /* @__PURE__ */ new Set();
+	const out = [];
+	for (const name of providers) {
+		if (typeof name === "string" && name.length > 0 && !seen.has(name)) {
+			seen.add(name);
+			out.push(name);
+		}
+	}
+	return out;
+}

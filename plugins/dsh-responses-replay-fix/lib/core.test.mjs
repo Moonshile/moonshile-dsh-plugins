@@ -5,8 +5,38 @@ import {
 	normalizeTextSignature,
 	normalizeThinkingSignature,
 	normalizeAssistantMessage,
-	normalizeMessages
+	normalizeMessages,
+	resolveProviders
 } from "./core.js";
+
+test("resolveProviders: undefined section falls back to defaults", () => {
+	assert.deepEqual(resolveProviders(undefined), ["zhongxin"]);
+});
+
+test("resolveProviders: null section falls back to defaults", () => {
+	assert.deepEqual(resolveProviders(null), ["zhongxin"]);
+});
+
+test("resolveProviders: explicit empty list disables all providers", () => {
+	assert.deepEqual(resolveProviders([]), []);
+});
+
+test("resolveProviders: configured list wins, order preserved, duplicates dropped", () => {
+	assert.deepEqual(resolveProviders(["zhongxin", "b-ai", "zhongxin"]), ["zhongxin", "b-ai"]);
+});
+
+test("resolveProviders: non-array garbage falls back to defaults", () => {
+	assert.deepEqual(resolveProviders("zhongxin"), ["zhongxin"]);
+	assert.deepEqual(resolveProviders(42), ["zhongxin"]);
+});
+
+test("resolveProviders: custom defaults respected when section missing", () => {
+	assert.deepEqual(resolveProviders(undefined, ["morph"]), ["morph"]);
+});
+
+test("resolveProviders: empty-string entries are dropped", () => {
+	assert.deepEqual(resolveProviders(["zhongxin", "", "b-ai"]), ["zhongxin", "b-ai"]);
+});
 
 test("normalizeMessageId: bare UUID gets msg_ prefix", () => {
 	const id = normalizeMessageId("5aa65569-9d38-408e-bac1-70983e4b2840");

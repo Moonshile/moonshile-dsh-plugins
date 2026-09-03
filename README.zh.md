@@ -41,6 +41,7 @@ pnpm publish --access public
 | --- | --- | --- | --- |
 | [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天顺序稳定） | `dsh plugin --profile web add dsh-workspace-sort` | 无需配置——安装后重启 `dsh web`，它每天按会话活动自动排序；上次排序日期存于 `~/.dsh/workspace-sort-state.json`。 |
 | [dsh-last-turn-delete](plugins/dsh-last-turn-delete/README.md) | 最新可删项（最后一条用户消息或失败的 `/compact` 卡片）上的垃圾桶按钮（与待发队列同款图标），**软删除该轮对话**使其不再进入模型上下文，随后移到上一项，直到真正 compact 边界或无消息 | `dsh plugin --profile web add dsh-last-turn-delete` | 安装后重启 `dsh web` 并刷新。点垃圾桶（确认气泡）即删除；按钮在回复结束后才出现。被删除的一轮在界面中变暗；持久化日志不会被改写。 |
+| [dsh-responses-replay-fix](plugins/dsh-responses-replay-fix/README.md) | 修复严格 Responses 网关（如中信 `www.wxzjai.com`）拒绝历史回放：回放前给消息 id 补 `msg_` 前缀、给 thinking 补明文 `reasoning_text` | `dsh plugin --profile web add dsh-responses-replay-fix` | 无需配置——安装后重启 `dsh web`。默认只作用于 `zhongxin` provider，可用 `DSH_RESPONSES_REPLAY_FIX_PROVIDERS=zhongxin,b-ai` 扩展。 |
 
 ## 添加插件
 

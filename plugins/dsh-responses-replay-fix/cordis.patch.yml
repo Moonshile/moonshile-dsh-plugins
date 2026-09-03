@@ -1,0 +1,7 @@
+# dsh-responses-replay-fix bundle patch: register the host-side plugin so it
+# can wrap the llm-pi-ai adapter and normalize replayed assistant messages
+# (msg_ id prefix + plaintext reasoning_text) before they reach strict
+# OpenAI-Responses gateways such as Zhongxin (www.wxzjai.com).
+- insert:
+    - id: responses-replay-fix
+      name: dsh-responses-replay-fix

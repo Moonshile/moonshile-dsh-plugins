@@ -1,0 +1,7 @@
+# dsh-last-turn-delete bundle patch: one dual-face row — the node half mounts
+# the lastTurnDelete Remote service; the same row is picked up by the
+# client-modules scanner (package.json dsh.client.platform: web) as the
+# browser half under /plugins/dsh-last-turn-delete/client.js.
+- insert:
+    - id: last-turn-delete
+      name: dsh-last-turn-delete

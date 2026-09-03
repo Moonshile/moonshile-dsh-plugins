@@ -40,6 +40,7 @@ Every plugin is an npm package installed with `dsh plugin` — one command, auto
 | Plugin | What it does | Install | Usage |
 | --- | --- | --- | --- |
 | [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | Re-sorts sidebar workspaces by last activity **once per day**; order stays stable the rest of the day | `dsh plugin --profile web add dsh-workspace-sort` | None needed — install, restart `dsh web`; it runs daily, sorting by session activity. Last-sort date is persisted at `~/.dsh/workspace-sort-state.json`. |
+| [dsh-last-turn-delete](plugins/dsh-last-turn-delete/README.md) | A trash button (same icon as the pending-message queue) on the newest deletable item — the last user message or a failed `/compact` card — that **soft-deletes that turn** so it no longer enters the model context, then walks back to the previous item until a real compact boundary or none remain | `dsh plugin --profile web add dsh-last-turn-delete` | Install, restart `dsh web`, refresh. Click the trash can (confirm bubble) to delete; the button appears only after the reply finishes. Deleted turns are dimmed in place; the durable log is never rewritten. |
 
 ## Adding a plugin
 

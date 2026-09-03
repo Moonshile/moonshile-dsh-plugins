@@ -40,6 +40,7 @@ pnpm publish --access public
 | 插件 | 说明 | 安装 | 使用方法 |
 | --- | --- | --- | --- |
 | [dsh-workspace-sort](plugins/dsh-workspace-sort/README.md) | 侧边栏工作区**每日**按最近活动排序一次（当天顺序稳定） | `dsh plugin --profile web add dsh-workspace-sort` | 无需配置——安装后重启 `dsh web`，它每天按会话活动自动排序；上次排序日期存于 `~/.dsh/workspace-sort-state.json`。 |
+| [dsh-last-turn-delete](plugins/dsh-last-turn-delete/README.md) | 最新可删项（最后一条用户消息或失败的 `/compact` 卡片）上的垃圾桶按钮（与待发队列同款图标），**软删除该轮对话**使其不再进入模型上下文，随后移到上一项，直到真正 compact 边界或无消息 | `dsh plugin --profile web add dsh-last-turn-delete` | 安装后重启 `dsh web` 并刷新。点垃圾桶（确认气泡）即删除；按钮在回复结束后才出现。被删除的一轮在界面中变暗；持久化日志不会被改写。 |
 
 ## 添加插件
 

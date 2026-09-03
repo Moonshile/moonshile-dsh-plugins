@@ -1,0 +1,57 @@
+{
+  "name": "dsh-last-turn-delete",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness (DSH) bundle: a delete button on the last user message that soft-deletes that turn — user message plus all its model replies — keeping it out of future model context, stepping back to the previous user message until a compact boundary or none remain (最后一条用户消息上的删除按钮：软删除该用户消息及其全部模型回复，不再进入后续模型上下文；按钮随后移到上一条用户消息，直到 compact 边界或无消息)",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/core.js",
+    "lib/client.js",
+    "cordis.patch.yml"
+  ],
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-session": "^0.1.2-alpha.5",
+    "@deepseek-ai/dsh-storage-domain": "^0.1.2-alpha.5",
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.2-alpha.5"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "bundle",
+    "client",
+    "delete",
+    "message",
+    "turn"
+  ],
+  "scripts": {
+    "test": "node --test lib/core.test.mjs"
+  }
+}

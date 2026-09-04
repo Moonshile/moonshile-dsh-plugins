@@ -1,2 +1,10 @@
 packages:
   - "plugins/*"
+
+# pnpm 11 refuses installs (exit 1) when dependency build scripts are not
+# approved. dsh-llm-pi-ai's dependency tree pulls in packages with build
+# scripts (@google/genai, protobufjs); allow them so CI `pnpm install
+# --frozen-lockfile` passes.
+allowBuilds:
+  '@google/genai': true
+  protobufjs: true

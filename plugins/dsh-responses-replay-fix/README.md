@@ -63,7 +63,7 @@ responses-replay-fix:
 dsh web host (lib/index.js)
   apply(ctx)
     registers settings section "responses-replay-fix" (providers list)
-    wraps PiAiAdapter.prototype.streamWithSnapshot
+    reads ctx.llm.adapters → wraps each adapter instance's streamWithSnapshot
       options.messages (durable assistant messages)
         ├─ textSignature.id  →  msg_ prefix if missing
         └─ thinkingSignature →  content: [{ type: "reasoning_text", text: <summary> }]
@@ -71,7 +71,11 @@ dsh web host (lib/index.js)
       yield* original(options, snapshot)   ← gateway receives conformant replay
 ```
 
-The wrap point is `streamWithSnapshot`, which every call path (`stream()` and the `prepareCall` stream closure) flows through, so one patch covers the whole provider. The target-provider list is read from the settings section on every request (via `source()`), so a settings change applies without a restart. Pure normalization logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency).
+The wrap target is each adapter **instance** registered on the `ctx.llm` service (own `streamWithSnapshot` property shadowing the prototype method), not the module's class prototype. Every call path (`stream()` and the `prepareCall` stream closure) dispatches through `this.streamWithSnapshot`, so wrapping the instance covers the whole provider.
+
+Why the instance and not the class: a profile bundle plugin resolves `@deepseek-ai/dsh-llm-pi-ai` through its own `node_modules` chain (a pnpm `link:` during development, the registry after publishing), which Node's ESM cache keys by module URL — a symlinked path and the host bundle's path are **two different module instances and therefore two different classes**. Patching the prototype of the copy the plugin sees would not touch the class the host actually instantiates. Taking the adapter from `ctx.llm` (the host's singleton service) always yields the real instance the requests flow through, regardless of how the module was resolved. Re-scanning happens on `llm/adapters-updated`, so provider changes / HMR re-registrations get wrapped too; a `PATCHED` symbol keeps each instance wrapped exactly once.
+
+The target-provider list is read from the settings section on every request (via `source()`), so a settings change applies without a restart. Pure normalization logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency).
 
 ## Development
 

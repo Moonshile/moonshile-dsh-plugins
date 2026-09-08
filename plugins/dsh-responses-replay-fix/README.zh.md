@@ -63,7 +63,7 @@ responses-replay-fix:
 dsh web host (lib/index.js)
   apply(ctx)
     注册 settings 段 "responses-replay-fix"（providers 名单）
-    包装 PiAiAdapter.prototype.streamWithSnapshot
+    读 ctx.llm.adapters → 逐个包装 adapter 实例的 streamWithSnapshot
       options.messages (durable assistant 消息)
         ├─ textSignature.id  →  缺 msg_ 前缀则补
         └─ thinkingSignature →  无明文 reasoning_text 时补
@@ -71,7 +71,11 @@ dsh web host (lib/index.js)
       yield* original(options, snapshot)   ← 网关收到合规回放
 ```
 
-包装点选 `streamWithSnapshot`：所有调用路径（`stream()` 与 `prepareCall` 返回的 stream 闭包）都经过它，一处补丁即覆盖整个 provider。目标 provider 名单每次请求从 settings 段读取（经 `source()`），所以改 settings 无需重启即时生效。纯规整逻辑在 `lib/core.js`（有单测，不依赖 DSH 运行时）。
+包装目标是 `ctx.llm` 服务上注册的每个 adapter **实例**（在实例上挂 own `streamWithSnapshot` 遮蔽原型方法），而不是模块 class 的 prototype。所有调用路径（`stream()` 与 `prepareCall` 返回的 stream 闭包）都经 `this.streamWithSnapshot` 动态下发，包装实例即可覆盖整个 provider。
+
+为什么包装实例而不是 class：profile bundle 插件经自己的 `node_modules` 链解析 `@deepseek-ai/dsh-llm-pi-ai`（开发期是 pnpm `link:`，发布后走 registry）。Node 的 ESM 缓存按**模块 URL** 去重——symlink 路径与宿主 bundle 的路径是两个不同模块实例，也就是两个不同 class。patch 插件所见副本的 prototype 不会作用到宿主实际实例化的那个 class。从 `ctx.llm`（宿主进程内的单例服务）取 adapter，无论模块怎么解析，拿到的都是请求真正经过的那个实例。`llm/adapters-updated` 事件触发时会重扫（provider 变更 / HMR 重注册也会被包装）；`PATCHED` 标记保证每个实例只包装一次。
+
+目标 provider 名单每次请求从 settings 段读取（经 `source()`），所以改 settings 无需重启即时生效。纯规整逻辑在 `lib/core.js`（有单测，不依赖 DSH 运行时）。
 
 ## 开发
 

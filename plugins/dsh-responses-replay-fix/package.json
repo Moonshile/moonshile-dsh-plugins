@@ -15,7 +15,6 @@
     "cordis.patch.yml"
   ],
   "peerDependencies": {
-    "@deepseek-ai/dsh-llm-pi-ai": "^0.1.2-alpha.5",
     "@deepseek-ai/schemastery": "^3.18.2"
   },
   "dsh": {

@@ -1,6 +1,6 @@
 {
   "name": "dsh-responses-replay-fix",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness (DSH) host plugin: fix OpenAI-Responses history replay rejected by strict gateways (e.g. Zhongxin www.wxzjai.com) — message ids get a msg_ prefix and thinking items get plaintext reasoning_text before resend (修复严格 Responses 网关的历史回放 400：消息 id 补 msg_ 前缀、thinking 补明文 reasoning_text)",
   "type": "module",
   "main": "lib/index.js",

@@ -22,27 +22,45 @@
  * events stay in the log untouched (soft delete; nothing is lost).
  */
 
-/** Package name — also the identity stored on every deletion marker. */
+/**
+ * Package name — also the plugin identity stored on every deletion marker
+ * (`source.plugin`).
+ */
 export const PKG_NAME = "dsh-last-turn-delete";
 
 /**
  * The marker user/message's source identity. The chat transcript folds only
  * append-surface user messages, so this replacement never renders a row; it
  * only occupies the surface slot where the deleted turn used to be.
+ *
+ * The shape is the format-mandated plugin message source
+ * (`{ kind: "plugin", plugin: <package name> }`, see
+ * `@deepseek-ai/dsh-llm`'s `MessageSourceMap` and the released Session format
+ * validators): the Session log is durable history read back through the
+ * versioned format migration chain, and an off-schema source makes that chain
+ * refuse the whole Session. Invented members such as `name`/`operation` are
+ * therefore not free-form — the package name is the only identity a marker may
+ * carry.
  */
 export function deletionMarkerSource() {
 	return {
 		kind: "plugin",
-		name: PKG_NAME,
-		operation: "delete"
+		plugin: PKG_NAME
 	};
 }
 
 /**
  * Whether an event is one of this plugin's deletion markers: a
  * `user/message` surface replacement carrying the plugin's source identity.
+ *
+ * {@link deletionMarkerSource} is the only shape this plugin writes, but the
+ * `plugin` member only landed with the corrected identity: the first release
+ * wrote `{ kind: "plugin", name, operation }`, which the format validator
+ * rejects. Historical logs may still contain that shape until they are
+ * repaired, so recognize both — reading old markers must never depend on a
+ * migration having been run.
  * @param event - one durable Session event.
- * @returns true for marker replacements appended by this plugin.
+ * @returns true for marker replacements appended by this plugin, either shape.
  */
 export function isDeleteMarker(event) {
 	if (event === null || typeof event !== "object") return false;
@@ -51,7 +69,9 @@ export function isDeleteMarker(event) {
 	if (op === null || typeof op !== "object" || op.op !== "replace") return false;
 	const source = event.data?.source;
 	if (source === null || typeof source !== "object") return false;
-	return source.kind === "plugin" && source.name === PKG_NAME && source.operation === "delete";
+	if (source.kind !== "plugin") return false;
+	if (source.plugin === PKG_NAME) return true;
+	return source.name === PKG_NAME && source.operation === "delete";
 }
 
 /**

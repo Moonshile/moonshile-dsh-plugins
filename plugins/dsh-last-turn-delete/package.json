@@ -1,6 +1,6 @@
 {
   "name": "dsh-last-turn-delete",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness (DSH) bundle: a delete button on the last user message that soft-deletes that turn — user message plus all its model replies — keeping it out of future model context, stepping back to the previous user message until a compact boundary or none remain (最后一条用户消息上的删除按钮：软删除该用户消息及其全部模型回复，不再进入后续模型上下文；按钮随后移到上一条用户消息，直到 compact 边界或无消息)",
   "type": "module",
   "main": "lib/index.js",

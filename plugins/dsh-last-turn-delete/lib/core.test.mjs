@@ -54,6 +54,18 @@ function deletionMarker(seq, startSeq, endSeq, shadowedSeqs) {
 	};
 }
 
+/** Wrap one marker message payload as the durable replacement event. */
+function eventFor(marker) {
+	return {
+		type: "user/message",
+		seq: 4,
+		time: 0,
+		data: marker,
+		surfaceOp: { op: "replace", start: 0, end: 1 },
+		sourceEventSeqs: [0, 1]
+	};
+}
+
 const EVENT_AT = (events) => (seq) => events[seq];
 
 test("findTailDeletionTarget: no surface nodes -> none", () => {
@@ -125,7 +137,7 @@ test("collectDeletedMessages: ignores compaction checkpoints (different source)"
 			role: "user",
 			id: "compact-ckpt",
 			content: [{ type: "text", text: "<compacted-summary>…" }],
-			source: { kind: "plugin", name: "dsh-compaction-basic", operation: "checkpoint" }
+			source: { kind: "plugin", plugin: "compact" }
 		},
 		surfaceOp: { op: "replace", start: 0, end: 1 },
 		sourceEventSeqs: [0, 1]
@@ -137,21 +149,41 @@ test("collectDeletedMessages: ignores compaction checkpoints (different source)"
 test("isDeleteMarker / marker message identity round-trip", () => {
 	const marker = deletionMarkerMessage("m1");
 	assert.equal(marker.role, "user");
-	assert.equal(marker.source.kind, "plugin");
-	assert.equal(marker.source.name, PKG_NAME);
-	assert.equal(marker.source.operation, "delete");
-	assert.ok(Array.isArray(marker.content) && typeof marker.content[0].text === "string");
-	assert.deepEqual(deletionMarkerSource(), { kind: "plugin", name: PKG_NAME, operation: "delete" });
-
-	const event = {
-		type: "user/message",
-		surfaceOp: { op: "replace", start: 0, end: 1 },
-		data: marker,
-		sourceEventSeqs: [0, 1]
-	};
-	assert.equal(isDeleteMarker(event), true);
+	// The format-mandated plugin source shape: the package name is the identity,
+	// and nothing else may ride along (an off-schema source makes the Session
+	// format migration chain refuse the whole log).
+	assert.deepEqual(marker.source, { kind: "plugin", plugin: PKG_NAME });
+	assert.deepEqual(deletionMarkerSource(), { kind: "plugin", plugin: PKG_NAME });
+	assert.equal(isDeleteMarker(eventFor(marker)), true);
 	assert.equal(isDeleteMarker({ type: "user/message", surfaceOp: "append", data: userMessage(0, "u1").data }), false);
 	assert.equal(isDeleteMarker({ type: "compaction/summary", surfaceOp: { op: "replace", start: 0, end: 0 }, data: {} }), false);
+});
+
+test("isDeleteMarker: recognizes the legacy (format-invalid) marker shape", () => {
+	// Historic logs written before the identity fix carry `name`/`operation`
+	// instead of `plugin`. Reading them must keep working.
+	const legacy = {
+		type: "user/message",
+		seq: 7,
+		time: 0,
+		data: {
+			role: "user",
+			id: "legacy-marker",
+			content: [{ type: "text", text: "deleted" }],
+			source: { kind: "plugin", name: PKG_NAME, operation: "delete" }
+		},
+		surfaceOp: { op: "replace", start: 0, end: 1 },
+		sourceEventSeqs: [0, 1]
+	};
+	assert.equal(isDeleteMarker(legacy), true);
+	// A legacy marker must still be recognized as a deleted-message source.
+	const events = [userMessage(0, "u1"), assistantMessage(1, 1, 1), legacy];
+	assert.deepEqual(collectDeletedMessages(events), [{ messageId: "u1", seq: 0 }]);
+	// Other plugins' legacy-shaped sources are not this plugin's markers.
+	assert.equal(isDeleteMarker({
+		...legacy,
+		data: { ...legacy.data, source: { kind: "plugin", name: "some-other-plugin", operation: "delete" } }
+	}), false);
 });
 
 test("currentTailUserMessage: last genuine user message on the surface", () => {

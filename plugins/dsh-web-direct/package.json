@@ -1,0 +1,41 @@
+{
+  "name": "dsh-web-direct",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness (DSH) host plugin: make web_search / web_fetch bypass a machine fake-ip DNS and resolve/connect to the real public address (绕过 fake-ip DNS，让 web 工具解析到真实地址)",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js",
+    "lib/core.js",
+    "lib/core.test.mjs",
+    "README.md",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "bundle",
+    "web",
+    "web-fetch",
+    "web-search",
+    "fake-ip"
+  ],
+  "dependencies": {
+    "undici": "^8.10.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-credentials": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-web": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-web-fetch-http": "^0.1.2-rc.1"
+  },
+  "scripts": {
+    "test": "node --test lib/core.test.mjs"
+  }
+}

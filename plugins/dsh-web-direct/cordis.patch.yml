@@ -1,0 +1,19 @@
+# dsh-web-direct bundle patch.
+#
+# 1) Point the web seam at this plugin's providers. The stock composition pins
+#    `fetchProvider: http` / `searchProvider: deepseek-official`, and the seam
+#    reads that config once when it is constructed — so selecting the providers
+#    from code alone is not enough; the override has to be declared here. This
+#    bundle layer is applied after @deepseek-ai/dsh-base and dsh-web-app, which
+#    are what set the stock values.
+# 2) Register the host-side plugin that installs those providers.
+- id: web
+  config:
+    fetchProvider: http-direct
+    searchProvider: deepseek-direct
+
+- insert:
+    - id: web-direct
+      name: dsh-web-direct
+      inject:
+        - web

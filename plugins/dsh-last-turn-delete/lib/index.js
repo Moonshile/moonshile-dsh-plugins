@@ -218,7 +218,7 @@ class LastTurnDeleteService extends TypertRemoteService {
 				}
 				const marker = deletionMarkerMessage(randomUUID());
 				session.append("user/message", marker, {
-					surfaceOp: { op: "replace", start: target.startSeq, end: target.endSeq },
+					surfaceOp: { op: "replace", startSeq: target.startSeq, endSeq: target.endSeq },
 					sourceEventSeqs: target.shadowedSeqs
 				});
 				await this.ctx.sessions.flush(session);

@@ -39,7 +39,7 @@ window.__ModuleLoader__.load({
 		const NS = "lastTurnDelete";
 		const REMOTE_NS = "lastTurnDelete";
 		const ROW_DELETED = "data-ltd-deleted";
-		const DIAG_VERSION = 1;
+		const DIAG_VERSION = 3;
 
 		const zh = {
 			"delete.title": "删除本条消息及其全部回复",
@@ -503,9 +503,10 @@ window.__ModuleLoader__.load({
 				ok.addEventListener("click", () => {
 					ok.disabled = true;
 					ok.style.opacity = "0.5";
-					this.executeDelete(target, resetOk, t, setError).catch(() => {
+					this.executeDelete(target, resetOk, t, setError).catch((error) => {
+						this.note(error);
 						resetOk();
-						setError(t("delete.failed"));
+						setError(`${t("delete.failed")} (${error instanceof Error ? error.message : String(error)})`);
 					});
 				});
 				buttons.append(cancel, ok);
@@ -561,7 +562,8 @@ window.__ModuleLoader__.load({
 					: await props.deleteTurn(target.messageId));
 				diag.deletes += 1;
 				diagPush("delete", this.sessionId, card ? "compact" : "message",
-					result.ok === true ? "ok" : (result?.error?.code ?? "error"));
+					result.ok === true ? "ok" : (result?.error?.code ?? "error"),
+					result.ok === true ? "" : String(result?.error?.cause ?? result?.error?.message ?? ""));
 
 				if (result.ok === true) {
 					if (card) {
@@ -592,7 +594,16 @@ window.__ModuleLoader__.load({
 					return;
 				}
 				resetOk();
-				setError(code === "busy" ? t("delete.busy") : t("delete.failed"));
+				if (code === "busy") setError(t("delete.busy"));
+				else {
+					const cause = result.error?.cause;
+					setError([
+						t("delete.failed"),
+						code === void 0 ? "" : `（${code}）`,
+						result.error?.message === void 0 ? "" : `: ${result.error.message}`,
+						cause === void 0 ? "" : ` — ${String(cause)}`
+					].join(""));
+				}
 			}
 		}
 

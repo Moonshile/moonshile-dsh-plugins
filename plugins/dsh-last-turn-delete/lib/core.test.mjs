@@ -61,7 +61,7 @@ function eventFor(marker) {
 		seq: 4,
 		time: 0,
 		data: marker,
-		surfaceOp: { op: "replace", start: 0, end: 1 },
+		surfaceOp: { op: "replace", startSeq: 0, endSeq: 1 },
 		sourceEventSeqs: [0, 1]
 	};
 }
@@ -139,7 +139,7 @@ test("collectDeletedMessages: ignores compaction checkpoints (different source)"
 			content: [{ type: "text", text: "<compacted-summary>…" }],
 			source: { kind: "plugin", plugin: "compact" }
 		},
-		surfaceOp: { op: "replace", start: 0, end: 1 },
+		surfaceOp: { op: "replace", startSeq: 0, endSeq: 1 },
 		sourceEventSeqs: [0, 1]
 	};
 	const events = [userMessage(0, "u1"), assistantMessage(1, 1, 1), checkpoint];
@@ -172,7 +172,7 @@ test("isDeleteMarker: recognizes the legacy (format-invalid) marker shape", () =
 			content: [{ type: "text", text: "deleted" }],
 			source: { kind: "plugin", name: PKG_NAME, operation: "delete" }
 		},
-		surfaceOp: { op: "replace", start: 0, end: 1 },
+		surfaceOp: { op: "replace", startSeq: 0, endSeq: 1 },
 		sourceEventSeqs: [0, 1]
 	};
 	assert.equal(isDeleteMarker(legacy), true);

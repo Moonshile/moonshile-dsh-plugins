@@ -33,19 +33,22 @@ export const PKG_NAME = "dsh-last-turn-delete";
  * append-surface user messages, so this replacement never renders a row; it
  * only occupies the surface slot where the deleted turn used to be.
  *
- * The shape is the format-mandated plugin message source
- * (`{ kind: "plugin", plugin: <package name> }`, see
- * `@deepseek-ai/dsh-llm`'s `MessageSourceMap` and the released Session format
- * validators): the Session log is durable history read back through the
- * versioned format migration chain, and an off-schema source makes that chain
- * refuse the whole Session. Invented members such as `name`/`operation` are
- * therefore not free-form — the package name is the only identity a marker may
- * carry.
+ * The shape is the format-mandated **producer-owned** source kind. Session
+ * format v4 (DSH 0.2) refuses the retired plugin wrapper
+ * (`{ kind: "plugin", plugin: <package name> }`) outright —
+ * "format v4 message requires a producer-owned source kind" — and refuses it at
+ * *encode* time, so a marker written in the old shape cannot even be persisted.
+ * Format v3 accepts the old wrapper, and the v3→v4 migration rewrites it to
+ * `plugin:<package name>` (dropping the `plugin` member), so this plugin writes
+ * the already-migrated spelling: one shape that both format versions accept and
+ * that survives the migration byte-identically.
+ *
+ * Invented members such as `name`/`operation` are not free-form: a replacement
+ * message carries no producer field in v4, so the kind itself is the identity.
  */
 export function deletionMarkerSource() {
 	return {
-		kind: "plugin",
-		plugin: PKG_NAME
+		kind: `plugin:${PKG_NAME}`
 	};
 }
 
@@ -53,14 +56,22 @@ export function deletionMarkerSource() {
  * Whether an event is one of this plugin's deletion markers: a
  * `user/message` surface replacement carrying the plugin's source identity.
  *
- * {@link deletionMarkerSource} is the only shape this plugin writes, but the
- * `plugin` member only landed with the corrected identity: the first release
- * wrote `{ kind: "plugin", name, operation }`, which the format validator
- * rejects. Historical logs may still contain that shape until they are
- * repaired, so recognize both — reading old markers must never depend on a
- * migration having been run.
+ * Three shapes exist across the logs this plugin may read:
+ *
+ * 1. `{ kind: "plugin:<package name>" }` — what it writes today, and what the
+ *    v3→v4 migration produces from shape 2;
+ * 2. `{ kind: "plugin", plugin: <package name> }` — what it wrote before the
+ *    v4 fix (still the on-disk shape of existing v3 logs);
+ * 3. `{ kind: "plugin", name: <package name>, operation: "delete" }` — the
+ *    first release's invented shape, which every released format validator
+ *    refuses and `scripts/repair-deletion-marker-source.mjs` repairs.
+ *
+ * All three are recognized: reading old markers must never depend on a
+ * migration having been run. A marker whose source is already v4-shaped cannot
+ * be rewritten by the migration, so shape 1 is what keeps deletions deleted
+ * after the upgrade instead of making the turns reappear.
  * @param event - one durable Session event.
- * @returns true for marker replacements appended by this plugin, either shape.
+ * @returns true for marker replacements appended by this plugin, any shape.
  */
 export function isDeleteMarker(event) {
 	if (event === null || typeof event !== "object") return false;
@@ -69,6 +80,7 @@ export function isDeleteMarker(event) {
 	if (op === null || typeof op !== "object" || op.op !== "replace") return false;
 	const source = event.data?.source;
 	if (source === null || typeof source !== "object") return false;
+	if (source.kind === `plugin:${PKG_NAME}`) return true;
 	if (source.kind !== "plugin") return false;
 	if (source.plugin === PKG_NAME) return true;
 	return source.name === PKG_NAME && source.operation === "delete";

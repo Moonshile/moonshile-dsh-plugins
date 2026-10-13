@@ -149,14 +149,27 @@ test("collectDeletedMessages: ignores compaction checkpoints (different source)"
 test("isDeleteMarker / marker message identity round-trip", () => {
 	const marker = deletionMarkerMessage("m1");
 	assert.equal(marker.role, "user");
-	// The format-mandated plugin source shape: the package name is the identity,
-	// and nothing else may ride along (an off-schema source makes the Session
-	// format migration chain refuse the whole log).
-	assert.deepEqual(marker.source, { kind: "plugin", plugin: PKG_NAME });
-	assert.deepEqual(deletionMarkerSource(), { kind: "plugin", plugin: PKG_NAME });
+	// The producer-owned source kind: format v4 (DSH 0.2) refuses the retired
+	// `{ kind: "plugin", plugin }` wrapper at encode time, and the v3→v4
+	// migration rewrites that wrapper to exactly this spelling.
+	assert.deepEqual(marker.source, { kind: `plugin:${PKG_NAME}` });
+	assert.deepEqual(deletionMarkerSource(), { kind: `plugin:${PKG_NAME}` });
 	assert.equal(isDeleteMarker(eventFor(marker)), true);
 	assert.equal(isDeleteMarker({ type: "user/message", surfaceOp: "append", data: userMessage(0, "u1").data }), false);
 	assert.equal(isDeleteMarker({ type: "compaction/summary", surfaceOp: { op: "replace", start: 0, end: 0 }, data: {} }), false);
+});
+
+test("isDeleteMarker: recognizes the pre-v4 wrapper the v3→v4 migration rewrites", () => {
+	// On-disk shape of every marker written before the v4 fix: the migration
+	// turns it into `plugin:<pkg>` (dropping `plugin`), so a marker read after an
+	// upgrade arrives as v4Marker. Both spellings must count — otherwise the
+	// deleted turns reappear after upgrading.
+	const legacy = { ...eventFor(deletionMarkerMessage("m2")), data: { ...deletionMarkerMessage("m2"), source: { kind: "plugin", plugin: PKG_NAME } } };
+	const v4Marker = { ...eventFor(deletionMarkerMessage("m3")), data: { ...deletionMarkerMessage("m3"), source: { kind: `plugin:${PKG_NAME}` } } };
+	assert.equal(isDeleteMarker(legacy), true);
+	assert.equal(isDeleteMarker(v4Marker), true);
+	// Same id-less identity for another package is not this plugin's marker.
+	assert.equal(isDeleteMarker({ ...v4Marker, data: { ...v4Marker.data, source: { kind: "plugin:some-other-plugin" } } }), false);
 });
 
 test("isDeleteMarker: recognizes the legacy (format-invalid) marker shape", () => {

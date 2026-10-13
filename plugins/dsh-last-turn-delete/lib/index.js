@@ -143,7 +143,14 @@ class LastTurnDeleteService extends TypertRemoteService {
 	/**
 	 * Resolve a session's durable events + identity (live agent first, cold
 	 * persistence otherwise). `eventAt`/nodes derive from the same array.
-	 * @returns `{ header, events } | null`.
+	 *
+	 * Cold reads go through the persistence seam's `open(id, "read")` handle —
+	 * the same path `@deepseek-ai/dsh-message-feedback` uses. `inspect()` does not
+	 * exist on either runtime line, and a read open is also what makes DSH migrate
+	 * a historical (v3) generation in memory, so the cold answer always speaks the
+	 * current format.
+	 * @param sessionId - session to resolve.
+	 * @returns `{ header, events, nodes }`, or null when nothing readable is stored.
 	 */
 	async resolveInspection(sessionId) {
 		const live = this.ctx.agents.get(sessionId);
@@ -155,14 +162,26 @@ class LastTurnDeleteService extends TypertRemoteService {
 				nodes: live.session.surface.nodes
 			};
 		}
-		const inspection = await this.ctx.sessionPersistence.inspect(sessionId);
-		if (inspection?.events === void 0) return null;
-		return {
-			sessionId,
-			header: inspection.meta,
-			events: inspection.events,
-			nodes: foldSurface(inspection.events).nodes
-		};
+		let handle;
+		try {
+			handle = await this.ctx.sessionPersistence.open(sessionId, "read");
+		} catch (error) {
+			// No live agent and nothing openable on disk (absent, unreadable, or a
+			// format the running DSH refuses): the callers answer `session-not-found`.
+			this.ctx.logger?.debug?.("last-turn-delete: cold session open failed:", error?.message ?? error);
+			return null;
+		}
+		try {
+			const { events } = await handle.read();
+			return {
+				sessionId,
+				header: handle.header,
+				events,
+				nodes: foldSurface(events).nodes
+			};
+		} finally {
+			await handle.close();
+		}
 	}
 
 	/** Stored (forgotten) failed-compact ids guarded by session identity. */

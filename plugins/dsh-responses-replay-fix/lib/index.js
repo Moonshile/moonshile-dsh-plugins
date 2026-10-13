@@ -16,16 +16,20 @@
  * `reasoning_text`。只影响命中 provider 名单的请求；规则均为"缺失才补/
  * 不合法才改"，对规范网关（morph、官方 OpenAI）是无操作。
  *
- * 生效名单通过 DSH settings 段 `responses-replay-fix.providers` 配置
- * （settings.yaml 顶层键；默认 `["zhongxin"]`）。例如：
+ * 生效名单通过**本插件的 cordis entry config** 配置（DSH 0.2 起 settings 段就是
+ * 插件自己的 entry config；0.1.x 同样读得到 entry config）。写在 profile 的
+ * `cordis.patch.yml` 里：
  *
  *   ```yaml
- *   responses-replay-fix:
- *     providers: [zhongxin, b-ai]
+ *   - id: responses-replay-fix
+ *     name: dsh-responses-replay-fix
+ *     config:
+ *       providers: [zhongxin, b-ai]
  *   ```
  *
- * 未配置 → `["zhongxin"]`；显式空数组 → 不修复任何 provider。改动写进
- * settings 后对后续请求即时生效（每次请求读取当前解析值），无需重启。
+ * 未配置 → `["zhongxin"]`；显式空数组 → 不修复任何 provider。
+ * 注意：0.1.x 的 `settings.yaml` 段已不再被读取（0.2 移除了 `settings.installSection`，
+ * 并把 settings.yaml 整体迁移进 profile 的 cordis.patch.yml entry config）。
  *
  * 实现要点（为什么从 `ctx.llm` 取实例包装，而不是 patch 模块 class）：
  *
@@ -46,13 +50,10 @@ import { normalizeMessages, resolveProviders } from "./core.js";
 /** 本插件依赖的服务。 */
 const inject = [];
 
-/** settings 段名（settings.yaml 顶层键）。 */
-const SETTINGS_NAMESPACE = "responses-replay-fix";
-
-/** 默认命中的 provider（settings 未配置时）。 */
+/** 默认命中的 provider（entry config 未配置时）。 */
 const DEFAULT_PROVIDERS = ["zhongxin"];
 
-/** settings 段 schema：一个 provider 名单。 */
+/** entry config schema：一个 provider 名单（cordis 用它校验/补默认值）。 */
 const Config = z.object({
 	providers: z.array(z.string()).default([...DEFAULT_PROVIDERS])
 });
@@ -85,24 +86,20 @@ function wrapAdapterStream(adapter, readProviders, logger) {
 }
 
 /**
- * Apply：注册 settings 段，并包装宿主 `ctx.llm` 上已注册各 adapter 实例的
+ * Apply：读取本 entry 的 config，并包装宿主 `ctx.llm` 上已注册各 adapter 实例的
  * `streamWithSnapshot`。llm-pi-ai 在 base bundle 中先于本插件注册路由；
  * `llm/adapters-updated` 在路由变更（provider 增删 / HMR）时重发，届时重新
  * 扫描补包装。PATCHED 标记保证同一实例只包装一次。
  */
-function apply(ctx) {
+function apply(ctx, entryConfig) {
 	const logger = ctx.logger;
 
-	/** 当前权威配置：settings 段解析值；settings 服务缺席时退回组合 entry。 */
-	let source = () => ({ providers: [...DEFAULT_PROVIDERS] });
-	ctx.inject(["settings"], (settingsCtx) => {
-		settingsCtx.settings.installSection(ctx, SETTINGS_NAMESPACE, Config, { providers: [...DEFAULT_PROVIDERS] }, {
-			setSource: (current) => {
-				source = current;
-			},
-			onChange: () => {}
-		});
-	});
+	/**
+	 * 当前生效的 provider 名单：本插件 entry 的 `config.providers`（profile patch
+	 * 可覆盖），缺省时退回内置默认。entry config 变更会让 cordis 重新 apply，
+	 * 所以这里每次读取入参快照即可。
+	 */
+	const source = () => ({ providers: entryConfig?.providers ?? [...DEFAULT_PROVIDERS] });
 
 	/** 包装 llm 服务当前注册的全部 adapter 实例。 */
 	const wrapRegisteredAdapters = (llm) => {

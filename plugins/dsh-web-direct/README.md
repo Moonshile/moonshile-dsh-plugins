@@ -4,6 +4,12 @@
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）宿主插件：在 **fake-IP DNS** 环境下让内置 `web_fetch` / `web_search` 解析到真实公网地址并直连，而不是被 fake-ip 地址拦死。
 
+## 兼容性
+
+DeepSeek Harness **0.1.5-rc.1+** 与 **0.2.0-rc.x**（`peerDependencies` 同时声明两条线）。
+0.2 的 web 接缝与 stock provider 行为未变，插件只为绕过本机 fake-ip 解析：实测未装插件时 `web_fetch` 返回
+`resolves to a non-public IP address`，装载后同一请求返回 `Fetched <url> (HTTP 200)`。
+
 ## 它解决什么问题
 
 有些机器（公司零信任 / SASE / Clash·Mihomo 透明代理）的系统解析器会把**所有**域名解析到 `198.18.0.0/15` 这类保留段（fake-ip），于是：
@@ -55,6 +61,8 @@ node --test lib/core.test.mjs   # 纯逻辑单测（地址判定 / pinned lookup
 若部署里显式配置了 `web.fetchProvider` / `web.searchProvider`（或 `DSH_WEB_FETCH_PROVIDER` / `DSH_WEB_SEARCH_PROVIDER`），插件会保留该选择并打印告警，不会强行覆盖。
 
 ## English
+
+Compatible with DeepSeek Harness **0.1.5-rc.1+** and **0.2.0-rc.x** (`peerDependencies` declares both lines).
 
 Host plugin for DeepSeek Harness that keeps the built-in `web_fetch` / `web_search`
 working on a machine whose resolver is hijacked by a fake-IP tunnel (every

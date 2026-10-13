@@ -59,6 +59,12 @@ host (lib/index.js, lastTurnDelete Remote service)
 
 Host-authoritative answers travel back over `lastTurnDelete/tail`: the newest deletable item (`{kind: "message", messageId}` / `{kind: "compact", commandId}` / `{kind: null}`) plus `running`. Pure selection logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency); the marker/user-message payloads use the plugin's own `source` identity so compaction checkpoints are never mistaken for deletions. All button/popover styling is inline on created nodes — injected `<style>` blocks are managed by the host module system and cannot be relied on.
 
+## Compatibility
+
+DeepSeek Harness **0.1.5-rc.1+** and **0.2.0-rc.x** (`peerDependencies` declares both lines; DSH 0.2 enforces that range before loading a bundle).
+
+Session format **v3 and v4**. The marker's message source is the producer-owned kind `plugin:dsh-last-turn-delete` — v4 refuses the retired `{ kind: "plugin", plugin }` wrapper at encode time, and the v3→v4 migration rewrites that wrapper to exactly this spelling. The reader accepts both, so deletions made before the upgrade stay deleted afterwards.
+
 ## Development
 
 ```bash

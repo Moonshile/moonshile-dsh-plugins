@@ -43,26 +43,30 @@ dsh plugin --profile web add dsh-responses-replay-fix
 
 ## 目标 provider
 
-默认只作用于 **`zhongxin`** provider 路由。生效名单通过 DSH **settings 段** `responses-replay-fix` 配置（settings.yaml 顶层键，与 provider 配置同一处编辑）：
+默认只作用于 **`zhongxin`** provider 路由。生效名单来自**本插件的 cordis entry config**，写在 profile 的 `cordis.patch.yml` 里：
 
 ```yaml
-responses-replay-fix:
-  providers:
-    - zhongxin
-    - b-ai
+- id: responses-replay-fix
+  name: dsh-responses-replay-fix
+  config:
+    providers:
+      - zhongxin
+      - b-ai
 ```
 
 - **未配置** → `["zhongxin"]`（默认）。
 - **显式 `providers: []`** → 不修复任何 provider（等于关闭插件效果）。
 - **给定列表** → 只规整这些 provider 路由（`b-ai` 是另一个已知会返回裸 UUID 消息 id 的路由）。
-- settings 改动对后续请求即时生效——无需重启。
+- 配置变更会让 cordis 重载该 entry，对后续请求即时生效——无需重启。
+
+DSH 0.2 移除了 `settings.installSection` API，并把 `settings.yaml` 整体迁移进 profile 的 `cordis.patch.yml` entry config，所以旧的 settings.yaml 顶层段不再被读取。两条内核线（0.1.5+ 与 0.2.0-rc.x）都读 entry config。
 
 ## 工作原理
 
 ```
 dsh web host (lib/index.js)
   apply(ctx)
-    注册 settings 段 "responses-replay-fix"（providers 名单）
+    读取本 entry 的 config.providers（默认 ["zhongxin"]）
     读 ctx.llm.adapters → 逐个包装 adapter 实例的 streamWithSnapshot
       options.messages (durable assistant 消息)
         ├─ textSignature.id  →  缺 msg_ 前缀则补
@@ -75,7 +79,7 @@ dsh web host (lib/index.js)
 
 为什么包装实例而不是 class：profile bundle 插件经自己的 `node_modules` 链解析 `@deepseek-ai/dsh-llm-pi-ai`（开发期是 pnpm `link:`，发布后走 registry）。Node 的 ESM 缓存按**模块 URL** 去重——symlink 路径与宿主 bundle 的路径是两个不同模块实例，也就是两个不同 class。patch 插件所见副本的 prototype 不会作用到宿主实际实例化的那个 class。从 `ctx.llm`（宿主进程内的单例服务）取 adapter，无论模块怎么解析，拿到的都是请求真正经过的那个实例。`llm/adapters-updated` 事件触发时会重扫（provider 变更 / HMR 重注册也会被包装）；`PATCHED` 标记保证每个实例只包装一次。
 
-目标 provider 名单每次请求从 settings 段读取（经 `source()`），所以改 settings 无需重启即时生效。纯规整逻辑在 `lib/core.js`（有单测，不依赖 DSH 运行时）。
+目标 provider 名单来自 `apply(ctx, config)` 的 entry config；改配置会让 cordis 重载该 entry，因此无需重启即时生效。纯规整逻辑在 `lib/core.js`（有单测，不依赖 DSH 运行时）。
 
 ## 开发
 

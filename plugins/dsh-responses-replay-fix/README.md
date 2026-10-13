@@ -43,26 +43,30 @@ Other profiles: replace `web` with the profile name, e.g. `dsh plugin --profile 
 
 ## Provider targeting
 
-By default the fix applies only to the **`zhongxin`** provider route. The active provider list is configured through DSH's **settings** section `responses-replay-fix` (a top-level key in `settings.yaml`, editable from the same place you configure providers):
+By default the fix applies only to the **`zhongxin`** provider route. The active provider list is this plugin's **cordis entry config**, set in the profile's `cordis.patch.yml`:
 
 ```yaml
-responses-replay-fix:
-  providers:
-    - zhongxin
-    - b-ai
+- id: responses-replay-fix
+  name: dsh-responses-replay-fix
+  config:
+    providers:
+      - zhongxin
+      - b-ai
 ```
 
 - **Unset** → `["zhongxin"]` (the default).
 - **Explicit `providers: []`** → no provider is fixed (the plugin is effectively off).
 - **A list** → only those provider routes are normalized (`b-ai` is the other route known to emit bare-UUID message ids).
-- Settings changes apply to subsequent requests immediately — no restart needed.
+- A config change reloads the entry, so it applies to subsequent requests — no restart needed.
+
+DSH 0.2 removed the `settings.installSection` API and migrated `settings.yaml` into the profile's `cordis.patch.yml` entry config, so the old top-level `settings.yaml` section is no longer read. The entry config is read on both runtime lines (0.1.5+ and 0.2.0-rc.x).
 
 ## How it works
 
 ```
 dsh web host (lib/index.js)
   apply(ctx)
-    registers settings section "responses-replay-fix" (providers list)
+    reads this entry's config.providers (default ["zhongxin"])
     reads ctx.llm.adapters → wraps each adapter instance's streamWithSnapshot
       options.messages (durable assistant messages)
         ├─ textSignature.id  →  msg_ prefix if missing
@@ -75,7 +79,7 @@ The wrap target is each adapter **instance** registered on the `ctx.llm` service
 
 Why the instance and not the class: a profile bundle plugin resolves `@deepseek-ai/dsh-llm-pi-ai` through its own `node_modules` chain (a pnpm `link:` during development, the registry after publishing), which Node's ESM cache keys by module URL — a symlinked path and the host bundle's path are **two different module instances and therefore two different classes**. Patching the prototype of the copy the plugin sees would not touch the class the host actually instantiates. Taking the adapter from `ctx.llm` (the host's singleton service) always yields the real instance the requests flow through, regardless of how the module was resolved. Re-scanning happens on `llm/adapters-updated`, so provider changes / HMR re-registrations get wrapped too; a `PATCHED` symbol keeps each instance wrapped exactly once.
 
-The target-provider list is read from the settings section on every request (via `source()`), so a settings change applies without a restart. Pure normalization logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency).
+The target-provider list comes from the entry config passed to `apply(ctx, config)`; changing it reloads the entry, so a config change applies without a restart. Pure normalization logic lives in `lib/core.js` (unit-tested, no DSH runtime dependency).
 
 ## Development
 

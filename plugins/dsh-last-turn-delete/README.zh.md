@@ -59,6 +59,12 @@ dsh plugin --profile web add dsh-last-turn-delete
 
 宿主权威结果通过 `lastTurnDelete/tail` 回传：最新可删项（`{kind: "message", messageId}` / `{kind: "compact", commandId}` / `{kind: null}`）外加 `running`。纯选取逻辑在 `lib/core.js`（有单测、不依赖 DSH 运行时）；标记/用户消息载荷使用插件自己的 `source` 身份，因此不会把 compact 检查点误判为删除。按钮与气泡全部使用创建节点上的内联样式——注入的 `<style>` 由宿主模块系统接管、不可依赖。
 
+## 兼容性
+
+DeepSeek Harness **0.1.5-rc.1+** 与 **0.2.0-rc.x**（`peerDependencies` 同时声明两条线；DSH 0.2 加载 bundle 前会强制校验该范围）。
+
+会话格式 **v3 与 v4**。标记消息的 source 使用生产者自有 kind `plugin:dsh-last-turn-delete`——v4 会在**编码阶段**拒绝旧的 `{ kind: "plugin", plugin }` 包装，而 v3→v4 迁移正好把旧包装改写成这个拼写。读取端两种都认，因此升级前做过的删除在升级后依然保持删除。
+
 ## 开发
 
 ```bash

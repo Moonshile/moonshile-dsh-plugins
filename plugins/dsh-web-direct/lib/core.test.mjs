@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isPublicIp, mapAnthropicResponse, pinnedLookup } from "./core.js";
+import { causeChain, describeSearchStatus, describeSearchTransportFailure, isPublicIp, mapAnthropicResponse, pinnedLookup, selectSearchAuth } from "./core.js";
 
 test("isPublicIp: accepts real public addresses", () => {
 	for (const address of ["172.66.147.243", "104.20.23.154", "123.125.246.121", "8.8.8.8", "172.32.0.1", "2606:4700:10::ac42:93f3"]) {
@@ -104,4 +104,67 @@ test("mapAnthropicResponse: no result block is a provider error", () => {
 		() => mapAnthropicResponse({ content: [{ type: "text", text: "no search happened" }] }),
 		(error) => error.code === "WEB_PROVIDER_ERROR",
 	);
+});
+
+test("selectSearchAuth: an account token wins and travels alone", () => {
+	const auth = selectSearchAuth({ accountToken: "acct-token", apiKey: "sk-key" });
+	assert.equal(auth.kind, "account");
+	assert.deepEqual(auth.headers, { "x-dsh-auth-token": "acct-token" });
+});
+
+test("selectSearchAuth: falls back to the API key pair", () => {
+	const auth = selectSearchAuth({ apiKey: "sk-key" });
+	assert.equal(auth.kind, "api-key");
+	assert.deepEqual(auth.headers, { "x-api-key": "sk-key", authorization: "Bearer sk-key" });
+});
+
+test("selectSearchAuth: empty values count as absent", () => {
+	assert.equal(selectSearchAuth({ accountToken: "", apiKey: "" }), undefined);
+	assert.equal(selectSearchAuth({ accountToken: undefined, apiKey: undefined }), undefined);
+	const auth = selectSearchAuth({ accountToken: "", apiKey: "sk-key" });
+	assert.equal(auth.kind, "api-key");
+});
+
+test("causeChain: flattens the Undici connect failure", () => {
+	const timeout = Object.assign(new Error("Connect Timeout Error (attempted addresses: 104.244.42.197:443, timeout: 10000ms)"), { code: "UND_ERR_CONNECT_TIMEOUT" });
+	const syscall = Object.assign(new Error(""), { code: "ETIMEDOUT" });
+	timeout.cause = syscall;
+	const chain = causeChain(new TypeError("fetch failed", { cause: timeout }));
+	assert.equal(chain.length, 3);
+	assert.match(chain[0], /fetch failed/);
+	assert.match(chain[1], /^UND_ERR_CONNECT_TIMEOUT: Connect Timeout Error/);
+	assert.match(chain[2], /^ETIMEDOUT/);
+});
+
+test("causeChain: a bare error still yields one readable segment", () => {
+	assert.deepEqual(causeChain(new Error("boom")), ["boom"]);
+});
+
+test("describeSearchStatus: 401 on an API key points at the credential, not the chat route", () => {
+	const message = describeSearchStatus({ endpoint: "https://api.deepseek.com/anthropic/v1/messages", status: 401, detail: "Authentication Fails", authKind: "api-key" });
+	assert.match(message, /\(HTTP 401\): Authentication Fails/);
+	assert.match(message, /https:\/\/api\.deepseek\.com\/anthropic\/v1\/messages/);
+	assert.match(message, /never uses the conversation model's access point/);
+	assert.match(message, /DEEPSEEK_API_KEY/);
+});
+
+test("describeSearchStatus: a rejected account sign-in asks for a new sign-in", () => {
+	const message = describeSearchStatus({ endpoint: "https://api.deepseek.com/anthropic/v1/messages", status: 401, detail: undefined, authKind: "account" });
+	assert.match(message, /DeepSeek Account sign-in/);
+	assert.match(message, /Sign in to DeepSeek again/);
+	assert.doesNotMatch(message, /DEEPSEEK_API_KEY/);
+});
+
+test("describeSearchStatus: non-auth failures claim no credential problem", () => {
+	const message = describeSearchStatus({ endpoint: "https://api.deepseek.com/anthropic/v1/messages", status: 503, detail: "overloaded", authKind: "api-key" });
+	assert.match(message, /\(HTTP 503\): overloaded/);
+	assert.doesNotMatch(message, /DEEPSEEK_API_KEY/);
+});
+
+test("describeSearchTransportFailure: names the endpoint and keeps the cause codes", () => {
+	const timeout = Object.assign(new Error("Connect Timeout Error"), { code: "UND_ERR_CONNECT_TIMEOUT" });
+	const message = describeSearchTransportFailure(new TypeError("fetch failed", { cause: timeout }), "https://api.deepseek.com/anthropic/v1/messages");
+	assert.match(message, /https:\/\/api\.deepseek\.com\/anthropic\/v1\/messages/);
+	assert.match(message, /UND_ERR_CONNECT_TIMEOUT/);
+	assert.match(message, /reachability, not credentials/);
 });

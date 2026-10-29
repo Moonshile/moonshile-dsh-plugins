@@ -98,6 +98,77 @@ function pinnedLookup(addresses) {
 }
 
 /**
+ * Choose the auth headers for one search, mirroring the stock provider: a
+ * DeepSeek Account token wins and travels alone, otherwise the API key is sent
+ * as both `x-api-key` and a bearer token.
+ *
+ * @param input - the resolved account token and API key, either of which may be absent.
+ * @returns `{ kind, headers }`, or undefined when neither credential exists.
+ */
+function selectSearchAuth({ accountToken, apiKey }) {
+	if (typeof accountToken === "string" && accountToken.length > 0) {
+		return { kind: "account", headers: { "x-dsh-auth-token": accountToken } };
+	}
+	if (typeof apiKey === "string" && apiKey.length > 0) {
+		return { kind: "api-key", headers: { "x-api-key": apiKey, authorization: `Bearer ${apiKey}` } };
+	}
+	return undefined;
+}
+
+/**
+ * Flatten an error's `cause` chain into readable segments, so a transport
+ * failure reports `UND_ERR_CONNECT_TIMEOUT` / `ETIMEDOUT` instead of the bare
+ * `TypeError: fetch failed` Undici puts on the surface.
+ *
+ * @param error - the thrown error.
+ * @returns one segment per link in the chain, `CODE: message` where a code exists.
+ */
+function causeChain(error) {
+	const segments = [];
+	let current = error;
+	for (let depth = 0; current != null && depth < 8; depth += 1) {
+		const message = typeof current.message === "string" ? current.message : String(current);
+		const code = typeof current.code === "string" ? current.code : undefined;
+		segments.push(code === undefined ? message : `${code}: ${message}`);
+		current = current.cause;
+	}
+	return segments;
+}
+
+/**
+ * Render a non-2xx search response. A rejected account sign-in gets sign-in
+ * guidance; every other status states the endpoint and denies the most common
+ * misdiagnosis — that the conversation model's access point is involved.
+ *
+ * @param input - resolved endpoint, HTTP status, provider detail, and credential kind.
+ * @returns the message for the thrown `WebError`.
+ */
+function describeSearchStatus({ endpoint, status, detail, authKind }) {
+	const head = `DeepSeek search API error (HTTP ${status})${detail != null && detail.length > 0 ? `: ${detail}` : ""}`;
+	if (status === 401 && authKind === "account") {
+		return `${head}\n\nDeepSeek rejected the DeepSeek Account sign-in this search used. Sign in to DeepSeek again; the search endpoint (${endpoint}) does not need changing.`;
+	}
+	const context = `The search call goes to ${endpoint} and authenticates on its own — it never uses the conversation model's access point, so the chat route (for example opencode) neither causes nor fixes this.`;
+	if (status === 401 || status === 403) {
+		return `${head}\n\n${context} Replace the credential: store a valid DEEPSEEK_API_KEY through the credentials service (or export it in the launching environment), or sign in to DeepSeek and use a DeepSeek Account model, which searches with the account sign-in.`;
+	}
+	return `${head}\n\n${context}`;
+}
+
+/**
+ * Render a transport failure that never produced a response. The cause chain
+ * carries the actionable part, and the pinning design explains the rest.
+ *
+ * @param error - the transport error thrown by Undici.
+ * @param endpoint - the Messages endpoint that was dialled.
+ * @returns the message for the thrown `WebError`.
+ */
+function describeSearchTransportFailure(error, endpoint) {
+	const chain = causeChain(error);
+	return `web-direct search request to ${endpoint} failed before any response: ${chain.join(" <- ")}\n\nThis is reachability, not credentials: the hostname is resolved through public DNS and the connection is pinned to that answer. On a machine that reaches the internet only through a fake-ip tunnel the answer can be unroutable — override the endpoint with DEEPSEEK_SEARCH_BASE_URL, or stop pinning this seam.`;
+}
+
+/**
  * Build a `url -> cited_text` map from every text block's citations. Anthropic
  * `web_search_result` items carry no inline snippet, so the excerpt comes from
  * the citation keyed by URL (first occurrence wins).
@@ -151,4 +222,15 @@ function mapAnthropicResponse(response) {
 	return { sources, truncated: false };
 }
 
-export { citationSnippets, isPublicIp, isPublicIpv4, isPublicIpv6, mapAnthropicResponse, pinnedLookup };
+export {
+	causeChain,
+	citationSnippets,
+	describeSearchStatus,
+	describeSearchTransportFailure,
+	isPublicIp,
+	isPublicIpv4,
+	isPublicIpv6,
+	mapAnthropicResponse,
+	pinnedLookup,
+	selectSearchAuth,
+};

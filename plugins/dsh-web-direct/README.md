@@ -56,7 +56,22 @@ node --test lib/core.test.mjs   # 纯逻辑单测（地址判定 / pinned lookup
 无需配置。搜索端点/密钥沿用 DSH 既有约定：
 
 - 端点：`DEEPSEEK_SEARCH_BASE_URL`（默认 `https://api.deepseek.com/anthropic/v1`）
-- 密钥：credentials 服务里的 `DEEPSEEK_API_KEY`，否则回退到启动环境变量
+- 凭证，按优先级：
+  1. **DeepSeek 账号登录**：仅当发起搜索的会话路由是 `deepseek-account`（即对话模型用 DeepSeek 账号那条线）时，向 `ctx.deepseekAccount` 换一个 token，只发 `x-dsh-auth-token`；
+  2. `DEEPSEEK_API_KEY`：credentials 服务里的值，否则回退到启动环境变量。
+
+密钥每次搜索都重新解析，所以在 credentials 里换 key 不需要重启。
+
+## 搜索失败时的错误信息（0.1.2+）
+
+搜索是**独立的一次 DeepSeek Messages 调用**，不经过对话模型的接入点（opencode / 中转站 / 自建网关都无关）。0.1.2 起错误信息会把这件事直接说出来，并带上可操作的信息：
+
+| 场景 | 错误信息里包含 |
+| --- | --- |
+| 两个凭证都没有 | `WEB_PROVIDER_CREDENTIAL_MISSING`，说明该会话不在账号路由上、`DEEPSEEK_API_KEY` 为空，并给出端点 |
+| API key 被拒（401/403） | 实际 HTTP 状态与 DeepSeek 返回的 detail、端点、`DEEPSEEK_API_KEY` 的修补方式 |
+| 账号 token 被拒（401） | 提示重新登录 DeepSeek，并说明端点不需要改 |
+| 连接层失败（`TypeError: fetch failed`） | 展平后的 cause 链（如 `UND_ERR_CONNECT_TIMEOUT: … <- ETIMEDOUT`）+ 端点，并说明这是可达性问题而不是凭证问题 |
 
 若部署里显式配置了 `web.fetchProvider` / `web.searchProvider`（或 `DSH_WEB_FETCH_PROVIDER` / `DSH_WEB_SEARCH_PROVIDER`），插件会保留该选择并打印告警，不会强行覆盖。
 
@@ -72,3 +87,12 @@ validated real address, reusing the stock `HttpFetchProvider` for fetch and a
 pinned DeepSeek Messages call for search. It never touches the VPN, and unlike
 the process-wide `HTTPS_PROXY` route it does not reroute LLM/MCP traffic. The
 public-unicast validation is kept, so the SSRF boundary is not relaxed.
+
+Search authenticates with a DeepSeek Account token when the initiating Session
+routed through `deepseek-account`, and otherwise with `DEEPSEEK_API_KEY` — never
+with the conversation model's access point, which is why changing that route
+cannot break or fix a search. Since 0.1.2 every search failure names the
+endpoint: a rejected credential says which credential to replace, and a
+transport failure reports the flattened cause chain
+(`UND_ERR_CONNECT_TIMEOUT: … <- ETIMEDOUT`) instead of a bare
+`TypeError: fetch failed`.

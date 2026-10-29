@@ -35,7 +35,7 @@ import { isIP } from "node:net";
 import { WebError } from "@deepseek-ai/dsh-web";
 import { HttpFetchProvider } from "@deepseek-ai/dsh-web-fetch-http";
 import { credentialRef } from "@deepseek-ai/dsh-credentials";
-import { isPublicIp, mapAnthropicResponse, pinnedLookup } from "./core.js";
+import { isPublicIp, describeSearchStatus, describeSearchTransportFailure, mapAnthropicResponse, pinnedLookup, selectSearchAuth } from "./core.js";
 
 /** The web capability seam this provider registers into. */
 const inject = ["web"];
@@ -56,6 +56,9 @@ const SEARCH_MAX_TOKENS = 4096;
 const SEARCH_MAX_USES = 5;
 const SEARCH_API_KEY_ENV = "DEEPSEEK_API_KEY";
 const SEARCH_USER_AGENT = "deepseek-harness-direct/0.1.0";
+
+/** Provider route `@deepseek-ai/dsh-llm-deepseek-account` registers; `request/context` records it per Session. */
+const ACCOUNT_PROVIDER = "deepseek-account";
 
 /** Transport limits, aligned with the stock HTTP fetch provider's defaults. */
 const FETCH_LIMITS = {
@@ -149,6 +152,28 @@ async function resolveSearchApiKey(ctx) {
 }
 
 /**
+ * Resolve a DeepSeek Account token for this search, the way the stock provider
+ * does: only when the initiating Session's latest request routed through the
+ * account adapter, and only for the endpoint actually being dialled. A failed
+ * resolution is not fatal — the API key stays a usable fallback.
+ *
+ * @param ctx - plugin context, for the account and agent services.
+ * @param endpoint - the Messages endpoint this operation dispatches to.
+ * @returns the account token, or undefined when this conversation is not on the account route.
+ */
+async function resolveAccountToken(ctx, endpoint) {
+	const provider = ctx.get("agents")?.currentInitiator()?.session.requestContext()?.provider;
+	if (provider !== ACCOUNT_PROVIDER) return undefined;
+	try {
+		const token = await ctx.get("deepseekAccount")?.resolveToken(endpoint);
+		return typeof token === "string" && token.length > 0 ? token : undefined;
+	} catch (error) {
+		ctx.logger?.warn(`[web-direct] DeepSeek Account token resolution failed, falling back to ${SEARCH_API_KEY_ENV}: ${error?.message ?? error}`);
+		return undefined;
+	}
+}
+
+/**
  * Search through DeepSeek's native web search over a connection pinned to the
  * endpoint's real public IP rather than the machine's fake-ip answer.
  * @param ctx - plugin context (credential lookup).
@@ -157,48 +182,56 @@ async function resolveSearchApiKey(ctx) {
  * @returns normalized sources.
  */
 async function searchDirect(ctx, request, signal) {
-	const apiKey = await resolveSearchApiKey(ctx);
-	if (apiKey === void 0) {
+	const endpoint = `${process.env[SEARCH_ENV_BASE] ?? SEARCH_DEFAULT_BASE}/messages`;
+	const auth = selectSearchAuth({
+		accountToken: await resolveAccountToken(ctx, endpoint),
+		apiKey: await resolveSearchApiKey(ctx),
+	});
+	if (auth === undefined) {
 		throw new WebError(
-			`web-direct search has no API key for "${SEARCH_API_KEY_ENV}"; store it through the credentials service or export it in the launching environment`,
+			`web-direct search has no credential: this conversation is not on a DeepSeek Account model, and "${SEARCH_API_KEY_ENV}" is empty. The search call goes to ${endpoint} on its own — it never uses the conversation model's access point — so store a valid key through the credentials service, export it in the launching environment, or sign in to DeepSeek and use a DeepSeek Account model.`,
 			"WEB_PROVIDER_CREDENTIAL_MISSING",
 		);
 	}
-	const endpoint = `${process.env[SEARCH_ENV_BASE] ?? SEARCH_DEFAULT_BASE}/messages`;
 	const addresses = await resolvePublicReal(new URL(endpoint).hostname, signal);
 	const { Agent, fetch: undiciFetch } = await import("undici");
 	const dispatcher = new Agent({ autoSelectFamily: true, connect: { lookup: pinnedLookup(addresses) } });
 	try {
-		const response = await undiciFetch(endpoint, {
-			method: "POST",
-			redirect: "error",
-			headers: {
-				"x-api-key": apiKey,
-				authorization: `Bearer ${apiKey}`,
-				"anthropic-version": SEARCH_API_VERSION,
-				"content-type": "application/json",
-				accept: "application/json",
-				"user-agent": SEARCH_USER_AGENT,
-			},
-			body: JSON.stringify({
-				model: SEARCH_DEFAULT_MODEL,
-				max_tokens: SEARCH_MAX_TOKENS,
-				messages: [{ role: "user", content: [{ type: "text", text: `Perform a web search for the query: ${request.query}` }] }],
-				tools: [{ type: "web_search_20250305", name: "web_search", max_uses: SEARCH_MAX_USES }],
-			}),
-			...(signal !== void 0 ? { signal } : {}),
-			dispatcher,
-		});
+		let response;
+		try {
+			response = await undiciFetch(endpoint, {
+				method: "POST",
+				redirect: "error",
+				headers: {
+					...auth.headers,
+					"anthropic-version": SEARCH_API_VERSION,
+					"content-type": "application/json",
+					accept: "application/json",
+					"user-agent": SEARCH_USER_AGENT,
+				},
+				body: JSON.stringify({
+					model: SEARCH_DEFAULT_MODEL,
+					max_tokens: SEARCH_MAX_TOKENS,
+					messages: [{ role: "user", content: [{ type: "text", text: `Perform a web search for the query: ${request.query}` }] }],
+					tools: [{ type: "web_search_20250305", name: "web_search", max_uses: SEARCH_MAX_USES }],
+				}),
+				...(signal !== void 0 ? { signal } : {}),
+				dispatcher,
+			});
+		} catch (error) {
+			if (signal?.aborted === true) throw new WebError("web-direct search aborted", "WEB_ABORTED", { cause: error });
+			throw new WebError(describeSearchTransportFailure(error, endpoint), "WEB_PROVIDER_ERROR", { cause: error });
+		}
 		if (!response.ok) {
-			let message = `DeepSeek search API error (HTTP ${response.status})`;
+			let detail;
 			try {
 				const parsed = await response.json();
-				const detail = typeof parsed.error === "string" ? parsed.error : (parsed.error?.message ?? parsed.message);
-				if (detail != null && detail.length > 0) message += `: ${detail}`;
+				detail = typeof parsed.error === "string" ? parsed.error : (parsed.error?.message ?? parsed.message);
 			} catch {
 				/* keep the status-only message */
 			}
-			throw new WebError(message, "WEB_PROVIDER_ERROR");
+			if (signal?.aborted === true) throw new WebError("web-direct search aborted", "WEB_ABORTED");
+			throw new WebError(describeSearchStatus({ endpoint, status: response.status, detail, authKind: auth.kind }), "WEB_PROVIDER_ERROR");
 		}
 		try {
 			return mapAnthropicResponse(await response.json());
